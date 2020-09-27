@@ -36,7 +36,8 @@ const createProgramFromScripts = (gl, vertexShaderElementId, fragmentShaderEleme
 
 const shapeTypes = {
     rectangle: "RECTANGLE",
-    triangle: "TRIANGLE"
+    triangle: "TRIANGLE",
+    ellipse: "ELLIPSE"
 }
 let shapes = []
 let gl, attributeCoords, uniformColor, bufferCoords
@@ -93,6 +94,9 @@ const render = () => {
             case shapeTypes.triangle:
                 renderTriangle(shape);
                 break;
+            case shapeTypes.ellipse:
+                renderEllipse(shape);
+                break;
             default:
                 console.log(`Unexpected ShapeType encountered: ${shape.type}`)
         }
@@ -139,6 +143,32 @@ const renderTriangle = (triangle) => {
         float32Array, gl.STATIC_DRAW);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+const renderEllipse = (ellipse) => {
+    const divisions = Math.max(4, ellipse.dimensions.width, ellipse.dimensions.height);
+    let points = [];
+
+    for (let theta = 0; theta < (2 * Math.PI); theta += (2 * Math.PI / divisions)) {
+        const point = {
+            x: ellipse.center.x + Math.cos(theta) * ellipse.dimensions.width,
+            y: ellipse.center.y + Math.sin(theta) * ellipse.dimensions.height
+        }
+
+        points.push(point)
+    }
+
+    let triangles = [points[points.length - 1].x, points[points.length - 1].y, points[0].x, points[0].y, ellipse.center.x, ellipse.center.y];
+
+    for (let i = 0; i < points.length - 1; i++) {
+        triangles.push(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, ellipse.center.x, ellipse.center.y)
+    }
+
+    const float32Array = new Float32Array(triangles)
+
+    gl.bufferData(gl.ARRAY_BUFFER, float32Array, gl.STATIC_DRAW)
+
+    gl.drawArrays(gl.TRIANGLES, 0, points.length * 3)
 }
 
 const addShape = (center) => {
