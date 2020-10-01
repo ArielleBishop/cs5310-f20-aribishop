@@ -151,8 +151,8 @@ const renderEllipse = (ellipse) => {
 
     for (let theta = 0; theta < (2 * Math.PI); theta += (2 * Math.PI / divisions)) {
         const point = {
-            x: ellipse.center.x + Math.cos(theta) * ellipse.dimensions.width,
-            y: ellipse.center.y + Math.sin(theta) * ellipse.dimensions.height
+            x: ellipse.center.x + Math.cos(theta) * ellipse.dimensions.width / 2,
+            y: ellipse.center.y + Math.sin(theta) * ellipse.dimensions.height / 2
         }
 
         points.push(point)
