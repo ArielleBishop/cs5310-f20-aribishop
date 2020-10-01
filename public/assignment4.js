@@ -1,5 +1,4 @@
-// TODO: Upon deleting the last shape it is removed from object list but still rendered and input boxes do not update
-// TODO: Upon adding first shape input boxes do not update
+// TODO: Upon deleting the last shape it is still rendered on canvas
 
 const origin = { x: 0, y: 0 }
 const sizeOne = { width: 1, height: 1 }
@@ -55,7 +54,6 @@ let shapes = [
         scale: { x: 70, y: 70 }
     },
 ]
-
 
 let gl, attributeCoords, uniformMatrix, uniformColor, bufferCoords
 
@@ -181,6 +179,17 @@ const selectShape = (selectedIndex) => {
 
 const deleteShape = () => {
     shapes.splice(selectedShapeIndex, 1)
+    console.log(shapes)
+
+    if (shapes.length == 0) {
+        document.getElementById("tx").value = 0
+        document.getElementById("ty").value = 0
+        document.getElementById("sx").value = 1
+        document.getElementById("sy").value = 1
+        document.getElementById("rz").value = 0
+        document.getElementById("color").value = "#000000"
+    }
+
     render()
 }
 
@@ -277,7 +286,7 @@ const renderEllipse = (ellipse) => {
 }
 
 const renderStar = (star) => {
-    // I originally wanted this to render an n-sided regular star polygon and eventually got too bogged down and gave up
+    // I originally wanted this to render an n-sided regular star polygon and eventually got too bogged down in the trigonometry and gave up
     const n = 5;
     let outer = []
     let inner = []
@@ -339,5 +348,6 @@ const addShape = (translation, scale, rotation) => {
     }
 
     shapes.push(shape)
+    selectShape(shapes.length - 1) // for convenience, select the new shape
     render()
 }
