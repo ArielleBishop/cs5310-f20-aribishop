@@ -179,7 +179,6 @@ const selectShape = (selectedIndex) => {
 
 const deleteShape = () => {
     shapes.splice(selectedShapeIndex, 1)
-    console.log(shapes)
 
     if (shapes.length == 0) {
         document.getElementById("tx").value = 0
