@@ -15,6 +15,13 @@ const YELLOW_HEX = "#FFFF00"
 const YELLOW_RGB = webglUtils.hexToRgb(YELLOW_HEX)
 const MAGENTA_HEX = "#FF00FF"
 const MAGENTA_RGB = webglUtils.hexToRgb(MAGENTA_HEX)
+const up = [0, 1, 0]
+let target = [0, 0, -5]
+let lookAt = true
+let camera = {
+    translation: {x: 0, y: 0, z: 0},
+    rotation: {x: 0, y: 0, z: 0}
+}
 
 const shapeTypes = {
     rectangle: "RECTANGLE",
@@ -129,6 +136,27 @@ const init = () => {
 
     document.getElementById("color").onchange = event => updateColor(event)
 
+    document.getElementById("lookAt").onchange = event => webglUtils.toggleLookAt(event)
+    document.getElementById("ctx").onchange = event => webglUtils.updateCameraTranslation(event, "x")
+    document.getElementById("cty").onchange = event => webglUtils.updateCameraTranslation(event, "y")
+    document.getElementById("ctz").onchange = event => webglUtils.updateCameraTranslation(event, "z")
+    document.getElementById("crx").onchange = event => webglUtils.updateCameraRotation(event, "x")
+    document.getElementById("cry").onchange = event => webglUtils.updateCameraRotation(event, "y")
+    document.getElementById("crz").onchange = event => webglUtils.updateCameraRotation(event, "z")
+    document.getElementById("ltx").onchange = event => webglUtils.updateLookAtTranslation(event, 0)
+    document.getElementById("lty").onchange = event => webglUtils.updateLookAtTranslation(event, 1)
+    document.getElementById("ltz").onchange = event => webglUtils.updateLookAtTranslation(event, 2)
+
+    document.getElementById("lookAt").checked = lookAt
+    document.getElementById("ctx").value = camera.translation.x
+    document.getElementById("cty").value = camera.translation.y
+    document.getElementById("ctz").value = camera.translation.z
+    document.getElementById("crx").value = camera.rotation.x
+    document.getElementById("cry").value = camera.rotation.y
+    document.getElementById("crz").value = camera.rotation.z
+
+    document.addEventListener('keydown', handleKey);
+
     selectShape(0)
 }
 
@@ -144,6 +172,49 @@ const render = () => {
     const zFar = 2000;
 
     gl.bindBuffer(gl.ARRAY_BUFFER, bufferCoords);
+
+    let cameraMatrix = m4.identity();
+    let projectionMatrix, viewProjectionMatrix;
+    if(lookAt) {
+        let cameraMatrix = m4.identity()
+        cameraMatrix = m4.translate(
+            cameraMatrix,
+            camera.translation.x,
+            camera.translation.y,
+            camera.translation.z)
+        const cameraPosition = [
+            cameraMatrix[12],
+            cameraMatrix[13],
+            cameraMatrix[14]]
+        cameraMatrix = m4.lookAt(
+            cameraPosition,
+            target,
+            up)
+        cameraMatrix = m4.inverse(cameraMatrix)
+        projectionMatrix = m4.perspective(
+            fieldOfViewRadians, aspect, zNear, zFar)
+        viewProjectionMatrix = m4.multiply(
+            projectionMatrix, cameraMatrix)
+    } else {
+        cameraMatrix = m4.zRotate(
+            cameraMatrix,
+            m4.degToRad(camera.rotation.z));
+        cameraMatrix = m4.xRotate(
+            cameraMatrix,
+            m4.degToRad(camera.rotation.x));
+        cameraMatrix = m4.yRotate(
+            cameraMatrix,
+            m4.degToRad(camera.rotation.y));
+        cameraMatrix = m4.translate(
+            cameraMatrix,
+            camera.translation.x,
+            camera.translation.y,
+            camera.translation.z);
+        projectionMatrix = m4.perspective(
+            fieldOfViewRadians, aspect, zNear, zFar);
+        viewProjectionMatrix = m4.multiply(
+            projectionMatrix, cameraMatrix);
+    }
 
     const $shapeList = $("#object-list")
     $shapeList.empty()
@@ -168,7 +239,7 @@ const render = () => {
 
         gl.uniform4f(uniformColor, shape.color.red, shape.color.green, shape.color.blue, 1);
 
-        let M = computeModelViewMatrix(gl.canvas, shape, aspect, zNear, zFar)
+        let M = computeModelViewMatrix(shape, viewProjectionMatrix)
         gl.uniformMatrix4fv(uniformMatrix, false, M)
 
         switch (shape.type) {
@@ -194,16 +265,70 @@ const render = () => {
 }
 
 let fieldOfViewRadians = m4.degToRad(60)
-const computeModelViewMatrix = (canvas, shape, aspect, zNear, zFar) => {
-    const width = canvas.clientWidth
-    const height = canvas.clientHeight
-    let M = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar)
-    M = m4.translate(M, shape.translation.x, shape.translation.y, shape.translation.z)
+const computeModelViewMatrix = (shape, viewProjectionMatrix) => {
+    M = m4.translate(viewProjectionMatrix,
+        shape.translation.x,
+        shape.translation.y,
+        shape.translation.z)
     M = m4.xRotate(M, m4.degToRad(shape.rotation.x))
     M = m4.yRotate(M, m4.degToRad(shape.rotation.y))
     M = m4.zRotate(M, m4.degToRad(shape.rotation.z))
     M = m4.scale(M, shape.scale.x, shape.scale.y, shape.scale.z)
     return M
+}
+
+const handleKey = (e) => {
+    let ctzValue = parseInt(document.getElementById("ctz").value);
+    let cryValue = parseInt(document.getElementById("cry").value);
+    let targetX = target[0];
+
+    let newValue;
+    switch (e.code) {
+        // MOVE FORWARD
+        case "ArrowUp":
+        case "KeyW": 
+            newValue = lookAt ? ctzValue - 5 : ctzValue + 5
+            document.getElementById("ctz").value = newValue
+            camera.translation["z"] = newValue
+            render()
+            break;
+        // TURN LEFT
+        case "ArrowLeft":
+        case "KeyA":
+            if (lookAt) {
+                newValue = targetX - 2
+                document.getElementById("ltx").value = newValue
+                target[0] = newValue
+            } else {
+                newValue = cryValue - 2
+                document.getElementById("cry").value = newValue
+                camera.rotation["y"] = newValue
+            }
+            render()
+            break;
+        // MOVE BACKWARD
+        case "ArrowDown":
+        case "KeyS":
+            newValue = lookAt ? ctzValue + 5 : ctzValue - 5
+            document.getElementById("ctz").value = newValue
+            camera.translation["z"] = newValue
+            render()
+            break;
+        // TURN RIGHT
+        case "ArrowRight":
+        case "KeyD":
+            if (lookAt) {
+                newValue = targetX + 2
+                document.getElementById("ltx").value = newValue
+                target[0] = newValue
+            } else {
+                newValue = cryValue + 2
+                document.getElementById("cry").value = newValue
+                camera.rotation["y"] = newValue
+            }
+            render()
+            break;
+    }
 }
 
 let selectedShapeIndex = 0
