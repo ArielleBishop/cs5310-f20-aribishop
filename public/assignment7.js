@@ -16,12 +16,15 @@ const YELLOW_RGB = webglUtils.hexToRgb(YELLOW_HEX)
 const MAGENTA_HEX = "#FF00FF"
 const MAGENTA_RGB = webglUtils.hexToRgb(MAGENTA_HEX)
 const up = [0, 1, 0]
-let target = [0, 0, -5]
+let target = [5, 0, 10]
 let lookAt = true
+
 let camera = {
-    translation: {x: 0, y: 0, z: 0},
-    rotation: {x: 0, y: 0, z: 0}
+    translation: {x: 45, y: 35, z: -21},
+    rotation: {x: 40, y: 235, z: 0}
 }
+
+let lightSource = [0.4, -0.3, 0.2]
 
 const shapeTypes = {
     rectangle: "RECTANGLE",
@@ -33,53 +36,72 @@ const shapeTypes = {
 
 let shapes = [
     {
-        type: shapeTypes.rectangle,
-        position: origin,
-        dimensions: sizeOne,
-        color: RED_RGB,
-        translation: { x: -65, y: 25, z: -120 },
-        scale: { x: 50, y: 50, z: 10 },
-        rotation: { x: 0, y: 0, z: 0 }
-    },
-    {
-        type: shapeTypes.triangle,
+        type: shapeTypes.cube,
         position: origin,
         dimensions: sizeOne,
         color: BLUE_RGB,
-        translation: { x: -65, y: 25, z: -100 },
-        scale: { x: 50, y: 50, z: 10 },
-        rotation: { x: 0, y: 0, z: 0 }
-    },
-    {
-        type: shapeTypes.ellipse,
-        position: origin,
-        dimensions: sizeOne,
-        color: GREEN_RGB,
-        translation: { x: 60, y: 25, z: -80 },
-        scale: { x: 30, y: 30, z: 15 },
-        rotation: { x: 0, y: 0, z: 0 }
-    },
-    {
-        type: shapeTypes.star,
-        position: origin,
-        dimensions: sizeOne,
-        color: CYAN_RGB,
-        translation: { x: 35, y: -15, z: -60 },
-        scale: { x: 20, y: 20, z: 5 },
-        rotation: { x: 0, y: 0, z: 36 }
+        translation: { x: 0, y: 0, z: 0 },
+        scale: { x: 0.5, y: 0.5, z: 0.5 },
+        rotation: { x: 0, y: 0, z: 0 },
     },
     {
         type: shapeTypes.cube,
         position: origin,
         dimensions: sizeOne,
-        color: YELLOW_RGB,
-        translation: { x: -15, y: -15, z: -100 },
-        scale: { x: 1, y: 1, z: 1 },
-        rotation: { x: 0, y: 45, z: 0 }
+        color: GREEN_RGB,
+        translation: { x: 20, y: 0, z: 0 },
+        scale: { x: 0.5, y: 0.5, z: 0.5 },
+        rotation: { x: 0, y: 0, z: 0 },
+    },
+    {
+        type: shapeTypes.cube,
+        position: origin,
+        dimensions: sizeOne,
+        color: RED_RGB,
+        translation: { x: -20, y: 0, z: 0 },
+        scale: { x: 0.5, y: 0.5, z: 0.5 },
+        rotation: { x: 0, y: 0, z: 0 }
     }
+    // {
+    //     type: shapeTypes.rectangle,
+    //     position: origin,
+    //     dimensions: sizeOne,
+    //     color: RED_RGB,
+    //     translation: { x: -65, y: 25, z: -120 },
+    //     scale: { x: 50, y: 50, z: 10 },
+    //     rotation: { x: 0, y: 0, z: 0 }
+    // },
+    // {
+    //     type: shapeTypes.triangle,
+    //     position: origin,
+    //     dimensions: sizeOne,
+    //     color: BLUE_RGB,
+    //     translation: { x: -65, y: 25, z: -100 },
+    //     scale: { x: 50, y: 50, z: 10 },
+    //     rotation: { x: 0, y: 0, z: 0 }
+    // },
+    // {
+    //     type: shapeTypes.ellipse,
+    //     position: origin,
+    //     dimensions: sizeOne,
+    //     color: GREEN_RGB,
+    //     translation: { x: 60, y: 25, z: -80 },
+    //     scale: { x: 30, y: 30, z: 15 },
+    //     rotation: { x: 0, y: 0, z: 0 }
+    // },
+    // {
+    //     type: shapeTypes.star,
+    //     position: origin,
+    //     dimensions: sizeOne,
+    //     color: CYAN_RGB,
+    //     translation: { x: 35, y: -15, z: -60 },
+    //     scale: { x: 20, y: 20, z: 5 },
+    //     rotation: { x: 0, y: 0, z: 36 }
+    // }
 ]
 
 let gl, attributeCoords, uniformMatrix, uniformColor, bufferCoords
+let attributeNormals, uniformWorldViewProjection, uniformWorldInverseTranspose, uniformReverseLightDirectionLocation, normalBuffer
 
 const doMouseDown = (event) => {
     const boundingRectangle = canvas.getBoundingClientRect();
@@ -115,6 +137,14 @@ const init = () => {
     // initialize coordinate buffer to send array of vertices to GPU
     bufferCoords = gl.createBuffer();
 
+    attributeNormals = gl.getAttribLocation(program, "a_normals");
+    gl.enableVertexAttribArray(attributeNormals);
+    normalBuffer = gl.createBuffer();
+
+    uniformWorldViewProjection = gl.getUniformLocation(program, "u_worldViewProjection");
+    uniformWorldInverseTranspose = gl.getUniformLocation(program, "u_worldInverseTranspose");
+    uniformReverseLightDirectionLocation = gl.getUniformLocation(program, "u_reverseLightDirection");
+
     // configure canvas resolution and clear the canvas
     gl.uniform2f(uniformResolution, gl.canvas.width, gl.canvas.height);
     gl.clearColor(0, 0, 0, 0);
@@ -148,12 +178,23 @@ const init = () => {
     document.getElementById("ltz").onchange = event => webglUtils.updateLookAtTranslation(event, 2)
 
     document.getElementById("lookAt").checked = lookAt
+    document.getElementById("ltx").value = target[0]
+    document.getElementById("lty").value = target[1]
+    document.getElementById("ltz").value = target[2]
     document.getElementById("ctx").value = camera.translation.x
     document.getElementById("cty").value = camera.translation.y
     document.getElementById("ctz").value = camera.translation.z
     document.getElementById("crx").value = camera.rotation.x
     document.getElementById("cry").value = camera.rotation.y
     document.getElementById("crz").value = camera.rotation.z
+
+    document.getElementById("dlrx").value = lightSource[0]
+    document.getElementById("dlry").value = lightSource[1]
+    document.getElementById("dlrz").value = lightSource[2]
+
+    document.getElementById("dlrx").onchange = event => webglUtils.updateLightDirection(event, 0)
+    document.getElementById("dlry").onchange = event => webglUtils.updateLightDirection(event, 1)
+    document.getElementById("dlrz").onchange = event => webglUtils.updateLightDirection(event, 2)
 
     document.addEventListener('keydown', handleKey);
 
@@ -163,6 +204,9 @@ const init = () => {
 const render = () => {
     gl.bindBuffer(gl.ARRAY_BUFFER, bufferCoords);
     gl.vertexAttribPointer(attributeCoords, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    gl.vertexAttribPointer(attributeNormals, 3, gl.FLOAT, false, 0, 0);
 
     gl.enable(gl.CULL_FACE);
     gl.enable(gl.DEPTH_TEST);
@@ -175,7 +219,7 @@ const render = () => {
 
     let cameraMatrix = m4.identity();
     let projectionMatrix, viewProjectionMatrix;
-    if(lookAt) {
+    if (lookAt) {
         let cameraMatrix = m4.identity()
         cameraMatrix = m4.translate(
             cameraMatrix,
@@ -216,6 +260,22 @@ const render = () => {
             projectionMatrix, cameraMatrix);
     }
 
+    let worldMatrix = m4.identity()
+    const worldViewProjectionMatrix
+        = m4.multiply(viewProjectionMatrix, worldMatrix);
+    const worldInverseMatrix
+        = m4.inverse(worldMatrix);
+    const worldInverseTransposeMatrix
+        = m4.transpose(worldInverseMatrix);
+
+    gl.uniformMatrix4fv(uniformWorldViewProjection, false,
+        worldViewProjectionMatrix);
+    gl.uniformMatrix4fv(uniformWorldInverseTranspose, false,
+        worldInverseTransposeMatrix);
+
+    gl.uniform3fv(uniformReverseLightDirectionLocation,
+        m4.normalize(lightSource));
+
     const $shapeList = $("#object-list")
     $shapeList.empty()
     shapes.forEach((shape, index) => {
@@ -239,8 +299,8 @@ const render = () => {
 
         gl.uniform4f(uniformColor, shape.color.red, shape.color.green, shape.color.blue, 1);
 
-        let M = computeModelViewMatrix(shape, viewProjectionMatrix)
-        gl.uniformMatrix4fv(uniformMatrix, false, M)
+        let M = computeModelViewMatrix(shape, worldViewProjectionMatrix)
+        gl.uniformMatrix4fv(uniformWorldViewProjection, false, M)
 
         switch (shape.type) {
             case shapeTypes.rectangle:
@@ -286,7 +346,7 @@ const handleKey = (e) => {
     switch (e.code) {
         // MOVE FORWARD
         case "ArrowUp":
-        case "KeyW": 
+        case "KeyW":
             newValue = lookAt ? ctzValue - 5 : ctzValue + 5
             document.getElementById("ctz").value = newValue
             camera.translation["z"] = newValue
@@ -501,7 +561,7 @@ const renderStar = (star) => {
 }
 
 const renderCube = (cube) => {
-    const geometry = [
+    let geometry = [
         0, 0, 0, 0, 30, 0, 30, 0, 0,
         0, 30, 0, 30, 30, 0, 30, 0, 0,
         0, 0, 30, 30, 0, 30, 0, 30, 30,
@@ -516,8 +576,21 @@ const renderCube = (cube) => {
         30, 30, 30, 30, 0, 0, 30, 30, 0
     ]
 
-    const float32Array = new Float32Array(geometry)
-    gl.bufferData(gl.ARRAY_BUFFER, float32Array, gl.STATIC_DRAW)
+    geometry = new Float32Array(geometry)
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufferCoords);
+    gl.bufferData(gl.ARRAY_BUFFER, geometry, gl.STATIC_DRAW)
+
+    let normals = new Float32Array([
+        0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+        0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
+        0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0,
+        0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
+        -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
+        1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
+    ]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
+
     gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
 

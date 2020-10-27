@@ -18,34 +18,11 @@
 
 <body onload="init();render()">
     <div class="container">
-        <div>
-            <h1>A WebGL Mini CAD</h1>
+        <h1>A WebGL Mini CAD</h1>
+
+        <div class="section">
             <div class="sub-container" style="padding-right: 15px;">
                 <canvas id="canvas" width="500px" height="300px"></canvas><br />
-            </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between;">
-            <div class="sub-container" style="padding-right: 15px;">
-                <h3>Translation</h2>
-                X: <input id="tx" type="number" value="0" step="5" /><br />
-                Y: <input id="ty" type="number" value="0" step="5" /><br />
-                Z: <input id="tz" type="number" value="0" step="5" /><br />
-                <br />
-
-                <h3>Scaling</h2>
-                X: <input id="sx" type="number" value="1" step="0.5" /><br />
-                Y: <input id="sy" type="number" value="1" step="0.5" /><br />
-                Z: <input id="sz" type="number" value="1" step="0.5" /><br />
-                <br />
-
-                <h3>Rotation</h2>
-                X: <input id="rx" type="number" value="0" step="2" /><br />
-                Y: <input id="ry" type="number" value="0" step="2" /><br />
-                Z: <input id="rz" type="number" value="0" step="2" /><br />
-                <br />
-
-                <h3>Color: <input id="color" type="color"></h3>
             </div>
 
             <div class="sub-container">
@@ -55,7 +32,9 @@
                     Delete Selected
                 </button>
                 </br></br>
+            </div>
 
+            <div class="sub-container">
                 <label>
                     <input type="radio" name="shape" checked value="RECTANGLE" />
                     Rectangle
@@ -86,6 +65,30 @@
                 </button>
                 </br>
             </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between;">
+            <div class="sub-container" style="padding-right: 15px;">
+                <h3>Translation</h2>
+                X: <input id="tx" type="number" value="0" step="5" /><br />
+                Y: <input id="ty" type="number" value="0" step="5" /><br />
+                Z: <input id="tz" type="number" value="0" step="5" /><br />
+                <br />
+
+                <h3>Scaling</h2>
+                X: <input id="sx" type="number" value="1" step="0.5" /><br />
+                Y: <input id="sy" type="number" value="1" step="0.5" /><br />
+                Z: <input id="sz" type="number" value="1" step="0.5" /><br />
+                <br />
+
+                <h3>Rotation</h2>
+                X: <input id="rx" type="number" value="0" step="2" /><br />
+                Y: <input id="ry" type="number" value="0" step="2" /><br />
+                Z: <input id="rz" type="number" value="0" step="2" /><br />
+                <br />
+
+                <h3>Color: <input id="color" type="color"></h3>
+            </div>       
 
             <div class="sub-container">
                 <h3>Field of View: </h2>
@@ -107,27 +110,44 @@
                     Y: <input id="cry" type="number" value="0" step="2" /><br />
                     Z: <input id="crz" type="number" value="0" step="2" /><br />
             </div>
-        </div>
 
+            <div class="sub-container">
+                <h2>Light Direction</h2>
+                X: <input id="dlrx" type="range" value="0" min="-1" max="1" step="0.1"/>
+                <br/>
+                Y: <input id="dlry" type="range" value="0" min="-1" max="1" step="0.1"/>
+                <br/>
+                Z: <input id="dlrz" type="range" value="0" min="-1" max="1" step="0.1"/>
+                <br/>
+            </div>     
+        </div>
     </div>
 
     <script id="vertex-shader-3d" type="x-shader/x-vertex">
         attribute vec4 a_coords;
-        uniform mat4 u_matrix;
-        uniform vec4 u_color;
-        varying vec4 v_color;
+        attribute vec3 a_normals;
+        uniform mat4 u_worldViewProjection;
+        uniform mat4 u_worldInverseTranspose;
+        varying vec3 v_normal;
         void main() {
-          // Multiply the position by the matrix.
-          gl_Position = u_matrix * a_coords;
-          v_color = u_color;
+           gl_Position = u_worldViewProjection * a_coords;
+           v_normal = mat3(u_worldInverseTranspose) * a_normals;
         }
     </script>
 
     <script id="fragment-shader-3d" type="x-shader/x-fragment">
         precision mediump float;
-        varying vec4 v_color;
+        varying vec3 v_normal;
+        
+        uniform vec3 u_reverseLightDirection;
+        uniform vec4 u_color;
+        
         void main() {
-          gl_FragColor = v_color;
+           vec3 normal = normalize(v_normal);
+           float light = dot(normal, u_reverseLightDirection);
+        
+           gl_FragColor = u_color;
+           gl_FragColor.rgb *= light;
         }
     </script>
 
@@ -137,6 +157,14 @@
     .sub-container {
         display: inline-block;
         vertical-align: top;
+    }
+
+    .section div:not(:first-child) {
+        margin-left: 32px;
+    }
+
+    .section {
+        margin-bottom: 32px;
     }
 </style>
 
