@@ -5,10 +5,8 @@ const initializeShaderProgram = (gl) => {
     const fragmentShaderCode = document
         .getElementById("fragment-shader").textContent
 
-    const vertexShader = loadShader(gl,
-        gl.VERTEX_SHADER, vertexShaderCode);
-    const fragmentShader = loadShader(gl,
-        gl.FRAGMENT_SHADER, fragmentShaderCode);
+    const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vertexShaderCode);
+    const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fragmentShaderCode);
 
     const shaderProgram = gl.createProgram();
     gl.attachShader(shaderProgram, vertexShader);
@@ -31,6 +29,7 @@ const getProgramParameters = (gl, shaderProgram) => {
         program: shaderProgram,
         attribLocations: {
             vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+            vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
         },
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),

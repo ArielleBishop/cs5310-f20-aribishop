@@ -8,6 +8,7 @@ const drawScene = (gl, parameters, buffers) => {
         modelViewMatrix,
         [-0.0, 0.0, -6.0]);
     configurePositionBufferRead(gl, buffers, parameters);
+    configureColorBufferRead(gl, buffers, parameters);
     gl.useProgram(parameters.program);
     setUniforms(gl, parameters,
         projectionMatrix, modelViewMatrix);
@@ -39,21 +40,40 @@ const createProjectionMatrix = (gl) => {
     return projectionMatrix;
 }
 
-const configurePositionBufferRead =
-    (gl, buffers, parameters) => {
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-        gl.vertexAttribPointer(
-            parameters.attribLocations.vertexPosition,
-            2,
-            gl.FLOAT,
-            false,
-            0,
+const configurePositionBufferRead = (gl, buffers, parameters) => {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+    gl.vertexAttribPointer(
+        parameters.attribLocations.vertexPosition,
+        2,
+        gl.FLOAT,
+        false,
+        0,
 
 
-            0);
-        gl.enableVertexAttribArray(
-            parameters.attribLocations.vertexPosition);
-    }
+        0);
+    gl.enableVertexAttribArray(
+        parameters.attribLocations.vertexPosition);
+}
+
+const configureColorBufferRead = (gl, buffers, parameters) => {
+    const numComponents = 4;
+    const type = gl.FLOAT;
+    const normalize = false;
+    const stride = 0;
+    const offset = 0;
+    gl.bindBuffer(
+        gl.ARRAY_BUFFER,
+        buffers.color);
+    gl.vertexAttribPointer(
+        parameters.attribLocations.vertexColor,
+        numComponents,
+        type,
+        normalize,
+        stride,
+        offset);
+    gl.enableVertexAttribArray(
+        parameters.attribLocations.vertexColor);
+}
 
 const setUniforms = (gl, parameters, projectionMatrix, modelViewMatrix) => {
     gl.uniformMatrix4fv(
