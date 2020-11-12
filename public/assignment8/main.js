@@ -5,4 +5,6 @@ const main = () => {
     const shaderProgram = initializeShaderProgram(gl)
     const parameters = getProgramParameters(gl, shaderProgram);
     const buffers = initializeBuffers(gl)
+
+    drawScene(gl, parameters, buffers)
 }
